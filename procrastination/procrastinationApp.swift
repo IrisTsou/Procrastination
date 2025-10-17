@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct procrastinationApp: App {
+    @StateObject private var store = AppStore()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(store)
+                .onAppear { NotificationManager.requestAuthorization() }
         }
     }
 }
