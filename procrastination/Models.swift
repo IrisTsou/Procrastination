@@ -8,31 +8,94 @@ enum HabitFrequency: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum ProcrastinationType: String, Codable, Equatable {
+    case unknown = "尚未分析"
+    case perfectionist = "完美主義型"
+    case deadlineFighter = "死線戰士型"
+}
+
 struct Goal: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var title: String
     var icon: String
     var colorHex: String
+    var startDate: Date?
     var deadline: Date?
     var reminders: [Reminder] = []
     var subTasks: [TaskItem] = []
     var createdAt: Date = Date()
 }
 
-struct Habit: Identifiable, Codable, Equatable {
-    var id: UUID = UUID()
+struct GoalBreakdownResponse: Codable {
+    var chatReply: String // 給使用者看的自然語言回覆
+    var tasks: [TaskItem]   // 給程式處理的任務列表
+}
+
+struct ChatThread: Identifiable, Equatable, Codable {
+    let id: UUID
     var title: String
-    var icon: String
-    var colorHex: String
-    var frequency: HabitFrequency = .daily
-    var isArchived: Bool = false
+    var messages: [ChatMessage]
+    var relatedGoalID: UUID? = nil
+    var lastUpdated: Date = Date()
+    
+    init(id: UUID = UUID(), title: String, messages: [ChatMessage], relatedGoalID: UUID? = nil, lastUpdated: Date = Date()) {
+        self.id = id
+        self.title = title
+        self.messages = messages
+        self.relatedGoalID = relatedGoalID
+        self.lastUpdated = lastUpdated
+    }
+}
+
+struct ChatMessage: Identifiable, Equatable, Codable {
+    enum Role: String, Codable { case user, assistant }
+    let id: UUID
+    var role: Role
+    var text: String
+    var date: Date
+    
+    init(id: UUID = UUID(), role: Role, text: String, date: Date = Date()) {
+        self.id = id
+        self.role = role
+        self.text = text
+        self.date = date
+    }
+}
+
+struct Suggestion: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
 }
 
 struct TaskItem: Identifiable, Codable, Equatable {
-    var id: UUID = UUID()
+    var id: UUID
     var title: String
-    var isCompleted: Bool = false
+    var isCompleted: Bool
     var dueDate: Date?
+    var estimatedDuration: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case title, isCompleted, dueDate
+        case estimatedDuration
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
+        self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
+        self.estimatedDuration = try container.decodeIfPresent(String.self, forKey: .estimatedDuration)
+        self.id = UUID()
+    }
+    
+    init(id: UUID = UUID(), title: String, isCompleted: Bool = false, dueDate: Date? = nil, estimatedDuration: String? = nil) {
+        self.id = id
+        self.title = title
+        self.isCompleted = isCompleted
+        self.dueDate = dueDate
+        self.estimatedDuration = estimatedDuration
+    }
 }
 
 struct Reminder: Identifiable, Codable, Equatable {
@@ -101,7 +164,6 @@ enum Weekday: Int, CaseIterable, Identifiable, Codable {
 }
 
 struct Workstyle: Codable, Equatable {
-    /// 每天可配置的工時（小時），索引依序 Mon..Sun
     var dailyHours: [Double] = Array(repeating: 3.5, count: 7)
 }
 

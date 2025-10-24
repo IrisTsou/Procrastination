@@ -10,7 +10,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if store.hasOnboarded == true {
+            if store.hasOnboarded == false {
                 // Onboarding 階段：僅顯示問卷頁，不顯示 TabView
                 OnboardingQuestionsView()
                     .environmentObject(store)
@@ -94,5 +94,10 @@ struct TabButton: View {
 }
 
 #Preview {
-    ContentView().environmentObject(AppStore())
+    // Provide both AppStore and GeminiService for previews to avoid environment crashes.
+    let store = AppStore()
+    let gemini = GeminiService()
+    return ContentView()
+        .environmentObject(store)
+        .environment(gemini)
 }

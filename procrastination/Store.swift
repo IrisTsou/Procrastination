@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 struct Onboarding: Codable {
     var perfectionismPrep: Int = 3
@@ -14,17 +15,18 @@ struct Onboarding: Codable {
 
 final class AppStore: ObservableObject {
     @Published var goals: [Goal] = []
-    @Published var habits: [Habit] = []
     @Published var tasksToday: [TaskItem] = []
     @Published var moods: [MoodRecord] = []
     @Published var achievements: [Achievement] = []
     @Published var activity: ActivityStats = ActivityStats()
     @Published var workstyle: Workstyle = Workstyle()
     @Published var preferences = UserPreferences()
+    @Published var conversations: [ChatThread] = []   // 新增：保存 Gemini 對話
 
     // Added for onboarding flow
     @Published var onboarding: Onboarding = Onboarding()
     @Published var hasOnboarded: Bool = false
+    @Published var procrastinationType: ProcrastinationType = .unknown
     
     private let persistence = Persistence()
     private var cancellables: Set<AnyCancellable> = []
@@ -37,7 +39,6 @@ final class AppStore: ObservableObject {
     func load() {
         let snapshot = persistence.load()
         goals = snapshot.goals
-        habits = snapshot.habits
         tasksToday = snapshot.tasksToday
         moods = snapshot.moods
         achievements = snapshot.achievements
@@ -46,13 +47,14 @@ final class AppStore: ObservableObject {
         preferences = snapshot.preferences
         onboarding = snapshot.onboarding
         hasOnboarded = snapshot.hasOnboarded
+        procrastinationType = snapshot.procrastinationType
+        conversations = snapshot.conversations // 新增
     }
     
 
     func save() {
         let snapshot = Persistence.Snapshot(
             goals: goals,
-            habits: habits,
             tasksToday: tasksToday,
             moods: moods,
             achievements: achievements,
@@ -60,7 +62,9 @@ final class AppStore: ObservableObject {
             workstyle: workstyle,
             preferences: preferences,
             onboarding: onboarding,
-            hasOnboarded: hasOnboarded
+            hasOnboarded: hasOnboarded,
+            procrastinationType: procrastinationType,
+            conversations: conversations // 新增
         )
         persistence.save(snapshot: snapshot)
     }
@@ -81,6 +85,21 @@ final class AppStore: ObservableObject {
         save()
     }
     
+    // 會話相關便捷方法
+    func upsertThread(_ thread: ChatThread) {
+        if let idx = conversations.firstIndex(where: { $0.id == thread.id }) {
+            conversations[idx] = thread
+        } else {
+            conversations.insert(thread, at: 0)
+        }
+        save()
+    }
+    
+    func deleteThreads(at offsets: IndexSet) {
+        conversations.remove(atOffsets: offsets)
+        save()
+    }
+    
     private func setupDerived() {
         $tasksToday
             .sink { [weak self] tasks in
@@ -95,7 +114,6 @@ final class AppStore: ObservableObject {
 final class Persistence {
     struct Snapshot: Codable {
         var goals: [Goal]
-        var habits: [Habit]
         var tasksToday: [TaskItem]
         var moods: [MoodRecord]
         var achievements: [Achievement]
@@ -106,6 +124,10 @@ final class Persistence {
         // Added fields
         var onboarding: Onboarding
         var hasOnboarded: Bool
+        var procrastinationType: ProcrastinationType
+        
+        // 新增：對話
+        var conversations: [ChatThread]
     }
     
     private let url: URL = {
@@ -114,11 +136,15 @@ final class Persistence {
     }()
     
     func load() -> Snapshot {
+        
+        print("--- App data file path ---")
+        print(url.path)
+        print("--------------------------")
+        
         guard let data = try? Data(contentsOf: url),
               let s = try? JSONDecoder().decode(Snapshot.self, from: data) else {
             return Snapshot(
                 goals: [],
-                habits: [],
                 tasksToday: [],
                 moods: [],
                 achievements: [],
@@ -126,14 +152,19 @@ final class Persistence {
                 workstyle: Workstyle(),
                 preferences: UserPreferences(),
                 onboarding: Onboarding(),
-                hasOnboarded: false
+                hasOnboarded: false,
+                procrastinationType: .unknown,
+                conversations: [] // 新增
             )
         }
         return s
     }
     
     func save(snapshot: Snapshot) {
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        guard let data = try? encoder.encode(snapshot) else { return }
         try? data.write(to: url)
     }
 }
+

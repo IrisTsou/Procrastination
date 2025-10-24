@@ -10,6 +10,7 @@ import SwiftUI
 struct OnboardingQuestionsView: View {
     @EnvironmentObject var store: AppStore
     @State private var step: Int = 0   // 0: 第一頁, 1: 第二頁
+    @State private var showTieBreaker = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -108,9 +109,24 @@ struct OnboardingQuestionsView: View {
                     }
 
                     Button {
-                        // 送出：標記已完成、保存、進入主畫面
-                        store.hasOnboarded = true
-                        store.save()
+                        let ob = store.onboarding
+                        
+                        // a = 完美主義者
+                        let scoreA = ob.perfectionismPrep + ob.anxietyStart + ob.researchLoop + ob.selfBlame
+
+                        // b = 死線戰士
+                        let scoreB = ob.pressureNeed + ob.lastMinute + ob.needExternalPressure + ob.noPressureIdle
+
+                        if scoreA > scoreB {
+                            store.procrastinationType = .perfectionist
+                            completeOnboarding()
+                        } else if scoreB > scoreA {
+                            store.procrastinationType = .deadlineFighter
+                            completeOnboarding()
+                        } else {
+                            // a == b，顯示平手題
+                            showTieBreaker = true
+                        }
                     } label: {
                         Text("Submit")
                             .font(.headline)
@@ -125,9 +141,71 @@ struct OnboardingQuestionsView: View {
             }
         }
         .padding(.horizontal, 20)
+        .sheet(isPresented: $showTieBreaker) {
+                TieBreakerView(
+                    onSelectPerfectionist: {
+                        store.procrastinationType = .perfectionist
+                        completeOnboarding()
+                        showTieBreaker = false
+                    },
+                    onSelectDeadlineFighter: {
+                        store.procrastinationType = .deadlineFighter
+                        completeOnboarding()
+                        showTieBreaker = false
+                    }
+                )
+                .presentationDetents([.medium]) // 讓它只佔一半
+                .presentationDragIndicator(.visible)
+        }
         .background(Color(uiColor: .systemBackground))
     }
+    
+    private func completeOnboarding() {
+        store.hasOnboarded = true
+        store.save()
+        // App 會自動因為 hasOnboarded 變為 true 而切換到 ContentView
+    }
 }
+
+private struct TieBreakerView: View {
+    var onSelectPerfectionist: () -> Void
+    var onSelectDeadlineFighter: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text("最後一個問題！")
+                .font(.largeTitle.bold())
+
+            Text("當你面對任務時，你通常是因為擔心結果不完美而拖延，還是因為沒有壓力就提不起勁開始？")
+                .font(.title3)
+                .lineSpacing(6)
+                .padding(.bottom)
+
+            Button(action: onSelectPerfectionist) {
+                Text("擔心結果不完美")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.blue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+
+            Button(action: onSelectDeadlineFighter) {
+                Text("沒有壓力提不起勁")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.blue)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            Spacer()
+        }
+        .padding(30)
+    }
+}
+
 
 private struct QuestionCard: View {
     let index: Int
