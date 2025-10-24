@@ -167,7 +167,7 @@ struct OnboardingQuestionsView: View {
     }
 }
 
-private struct TieBreakerView: View {
+struct TieBreakerView: View {
     var onSelectPerfectionist: () -> Void
     var onSelectDeadlineFighter: () -> Void
 
@@ -207,7 +207,7 @@ private struct TieBreakerView: View {
 }
 
 
-private struct QuestionCard: View {
+struct QuestionCard: View {
     let index: Int
     let text: String
     @Binding var value: Int
