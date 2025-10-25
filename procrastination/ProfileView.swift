@@ -114,6 +114,46 @@ private struct WorkstyleSection: View {
                 }
             }
             .padding(.top, 4)
+
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Task Arrange Preference").font(.title3).bold()
+
+                SingleChoiceQuestion(
+                    title: "1. 你希望系統安排任務時，偏好：",
+                    options: ArrangeStrategy.allCases,
+                    selection: Binding(
+                        get: { store.preferences.arrangeStrategy},
+                        set: { store.preferences.arrangeStrategy = $0; store.save() }
+                    )
+                )
+
+                SingleChoiceQuestion(
+                    title: "2. 你平日和週末的作息會不同嗎？",
+                    options: WeekdayWeekend.allCases,
+                    selection: Binding(
+                        get: { store.preferences.weekdayWeekend },
+                        set: { store.preferences.weekdayWeekend = $0; store.save() }
+                    )
+                )
+                    
+                SingleChoiceQuestion(
+                    title: "3. 你通常一次可以專心做事多久？",
+                    options: FocusSpan.allCases,
+                    selection: Binding(
+                        get: { store.preferences.focusSpan },
+                        set: { store.preferences.focusSpan = $0; store.save() }
+                    )
+                )
+                
+                SingleChoiceQuestion(
+                    title: "4. 當任務超過 1 小時時，你比較喜歡：",
+                    options: LongTaskPref.allCases,
+                    selection: Binding(
+                        get: { store.preferences.longTask },
+                        set: { store.preferences.longTask = $0; store.save() }
+                    )
+                )
+            }
         }
     }
 }
