@@ -1,22 +1,38 @@
-//
-//  procrastinationApp.swift
-//  procrastination
-//
-//  Created by Iris Tsou on 2025/10/10.
-//
-
+// procrastinationApp.swift
 import SwiftUI
 import FirebaseCore
+import Supabase
+import Combine
 
 @main
 struct procrastinationApp: App {
-    @StateObject private var store = AppStore()
+    // 這兩個現在要用「延後初始化」的寫法，因為 AuthViewModel 需要 store
+    @StateObject private var store: AppStore
+    @StateObject private var authVM: AuthViewModel
     @State private var geminiService: GeminiService
 
     init() {
-        // Ensure Firebase is configured before any service that depends on it is created.
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor(Color.themeBlue)
+        ]
+        appearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor(Color.themeBlue)
+        ]
+
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
         FirebaseApp.configure()
-        // Now it's safe to create GeminiService (which uses FirebaseAI/FirebaseApp)
+
+        // 先建立 AppStore
+        let appStore = AppStore()
+        _store = StateObject(wrappedValue: appStore)
+
+        // 再把同一個 appStore 傳給 AuthViewModel
+        _authVM = StateObject(wrappedValue: AuthViewModel(store: appStore))
+
+        // GeminiService 一樣
         _geminiService = State(initialValue: GeminiService())
     }
 
@@ -24,8 +40,17 @@ struct procrastinationApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
+                .environmentObject(authVM)
                 .environment(geminiService)
-                .onAppear { NotificationManager.requestAuthorization() }
+                .environment(\.locale, .init(identifier: store.language.rawValue))
+                .task {
+                    // ✅ App 啟動後，嘗試從 Supabase 恢復 session
+                    await authVM.restoreSessionOnLaunch()
+                }
+                .onAppear {
+                    // 只做本機通知授權，不再自動登入 Dev 帳號、也不自動 push 資料
+                    NotificationManager.requestAuthorization()
+                }
         }
     }
 }

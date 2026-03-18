@@ -15,7 +15,7 @@ struct AddEntryView: View {
     @State private var showColorPicker = false
     @State private var showDatePicker = false
     @State private var selectedIcon: String = "figure.walk"
-    @State private var selectedColorHex: String = "#F59E0B"
+    @State private var selectedColorHex: String = "#A5D8DC"
     @State private var deadline: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     @State private var addReminder: Bool = true
     @State private var reminderTime: Date = Date()
@@ -28,9 +28,6 @@ struct AddEntryView: View {
     // 新增：Start Date
     @State private var startDate: Date = Date()
     @State private var showStartDatePicker = false
-    
-    let icons = ["figure.walk", "drop.fill", "brain.head.profile", "heart.fill", "book.fill"]
-    let colors = ["Orange", "Blue", "Green", "Purple", "Red"]
     
     var body: some View {
         NavigationStack {
@@ -51,11 +48,12 @@ struct AddEntryView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left")
                             .font(.title2)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.themeBrown)
                     }
                     Spacer()
                     Text("Set a New Goal")
                         .font(.headline).bold()
+                        .foregroundColor(.themeBrown)
                     Spacer()
                     // Balance the back button
                     Color.clear.frame(width: 24, height: 24)
@@ -93,12 +91,12 @@ struct AddEntryView: View {
                                         ZStack {
                                             Circle().fill(Color.gray.opacity(0.1))
                                             Image(systemName: selectedIcon)
-                                                .foregroundStyle(.purple)
+                                                .foregroundStyle(Color.themeBlue)
                                         }
                                         .frame(width: 40, height: 40)
 
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text("Walking").bold()
+                                            Text(iconName(for: selectedIcon)).bold()
                                             Text("Icon").font(.caption).foregroundStyle(.secondary)
                                         }
                                         Spacer()
@@ -118,8 +116,9 @@ struct AddEntryView: View {
                                 Button(action: { showColorPicker = true }) {
                                     HStack(spacing: 12) {
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color(hex: selectedColorHex))
+                                            .fill(Color(hex: selectedColorHex) ?? Color.themeBlue)
                                             .frame(width: 24, height: 24)
+
 
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(colorName(for: selectedColorHex)).bold()
@@ -153,7 +152,7 @@ struct AddEntryView: View {
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                     Text(startDate.formatted(.dateTime.year().month().day()))
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(Color.themeBrown)
                                 }
                                 .padding(16)
                                 .background(Color.white)
@@ -169,7 +168,7 @@ struct AddEntryView: View {
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                     Text(deadline.formatted(.dateTime.year().month().day()))
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(Color.themeBrown)
                                 }
                                 .padding(16)
                                 .background(Color.white)
@@ -196,17 +195,17 @@ struct AddEntryView: View {
                                 Text("Want to receive a notification?")
                                 Spacer()
                                 Toggle("", isOn: $addReminder)
-                                    .toggleStyle(SwitchToggleStyle(tint: .green))
+                                    .toggleStyle(SwitchToggleStyle(tint: Color(hex: "#4fd4c9")))
                             }
                             
                             if addReminder {
                                 HStack(spacing: 12) {
                                     Image(systemName: "moon.fill")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(Color(hex: "#f0bd44"))
                                     Text("30 minutes before the deadline")
                                     Spacer()
                                     Image(systemName: "bell.fill")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(Color(hex: "#f0bd44"))
                                     Text("Every day")
                                 }
                                 .padding(16)
@@ -249,7 +248,7 @@ struct AddEntryView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.blue)
+                    .background(Color(hex: "#f0bd44"))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
@@ -275,30 +274,78 @@ struct AddEntryView: View {
         .background(Color(uiColor: .systemBackground))
     }
     
+    private func iconName(for systemName: String) -> LocalizedStringKey {
+        switch systemName {
+        case "figure.walk": return "Walking"
+        case "drop.fill": return "Water"
+        case "brain.head.profile": return "Focus"
+        case "heart.fill": return "Health"
+        case "book.fill": return "Reading"
+        case "bolt.fill": return "Energy"
+        case "flame.fill": return "Burn"
+        case "leaf.fill": return "Nature"
+        case "sun.max.fill": return "Morning"
+        case "moon.fill": return "Sleep"
+        case "timer": return "Timer"
+        case "alarm.fill": return "Wake up"
+        case "pencil": return "Write"
+        case "checkmark.seal.fill": return "Goal"
+        case "cart.fill": return "Shopping"
+        case "dumbbell.fill": return "Workout"
+        case "bicycle": return "Cycling"
+        case "medal.fill": return "Achievement"
+        case "music.note": return "Music"
+        case "paintbrush.fill": return "Art"
+        default: return "Custom"
+        }
+    }
+    
     private func createGoal() -> Goal {
         var reminders: [Reminder] = []
         if addReminder {
             reminders.append(Reminder(time: reminderTime, repeatDaily: true))
         }
-        // 驗證：保存前確保 start <= deadline
         let finalStart = startDate
         let finalDeadline = startDate > deadline
             ? Calendar.current.date(byAdding: .day, value: 7, to: startDate)
             : deadline
-        
         let newGoal = Goal(
             title: goalTitle.isEmpty ? "未命名目標" : goalTitle,
             icon: selectedIcon,
             colorHex: selectedColorHex,
-            startDate: finalStart, deadline: finalDeadline ?? deadline,
+            startDate: finalStart,
+            deadline: finalDeadline ?? deadline,
             reminders: reminders,
             subTasks: [],
             createdAt: Date()
         )
         store.addGoal(newGoal)
+
         if addReminder {
-            NotificationManager.scheduleDailyReminder(id: newGoal.id.uuidString, title: newGoal.title, at: reminderTime)
+            NotificationManager.scheduleDailyReminder(id: newGoal.id.uuidString,
+                                                      title: newGoal.title,
+                                                      at: reminderTime)
         }
+
+        let thread = ChatThread(
+            title: newGoal.title,
+            messages: [
+                .init(
+                    role: .assistant,
+                    text: "Hi! Tell me more about **\(newGoal.title)** and I’ll break it down into actionable steps for you. ✨"
+                )
+            ],
+            relatedGoalID: newGoal.id
+        )
+        store.upsertThread(thread)
+
+        Task {
+            try? await SupabaseRepository.shared.upsertConversation(thread)
+            if let first = thread.messages.first {
+                try? await SupabaseRepository.shared.upsertMessage(first, conversationId: thread.id)
+            }
+        }
+
         return newGoal
     }
 
@@ -385,7 +432,7 @@ struct AddEntryView: View {
 
 }
 
-private func colorName(for hex: String) -> String {
+private func colorName(for hex: String) -> LocalizedStringKey {
     switch hex {
     case "#BDCFFF": return "Skyblue"
     case "#B8C0FF": return "Blue"
@@ -464,8 +511,9 @@ struct ThemeColorPickerView: View {
                             } label: {
                                 ZStack {
                                     Circle()
-                                        .fill(Color(hex: c.hex))
+                                        .fill(Color(hex: c.hex) ?? .gray)
                                         .frame(width: 48, height: 48)
+
                                     if selectedHex == c.hex {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(.white)
@@ -506,36 +554,3 @@ private struct SystemColorPickerRow: View {
         }
     }
 }
-
-extension Color {
-    init(hex: String) {
-        self = Color(UIColor(hex: hex))
-    }
-
-    func toHex() -> String? {
-        UIColor(self).toHex()
-    }
-}
-
-extension UIColor {
-    convenience init(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-
-        var rgb: UInt64 = 0
-        Scanner(string: hexSanitized).scanHexInt64(&rgb)
-
-        let r = CGFloat((rgb & 0xFF0000) >> 16) / 255
-        let g = CGFloat((rgb & 0x00FF00) >> 8) / 255
-        let b = CGFloat(rgb & 0x0000FF) / 255
-        self.init(red: r, green: g, blue: b, alpha: 1)
-    }
-
-    func toHex() -> String? {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        guard getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
-        let rgb: Int = (Int)(r*255)<<16 | (Int)(g*255)<<8 | (Int)(b*255)<<0
-        return String(format:"#%06x", rgb)
-    }
-}
-

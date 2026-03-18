@@ -17,12 +17,13 @@ struct OnboardingQuestionsView: View {
             // 進度條
             ProgressView(value: step == 0 ? 0.5 : 1.0)
                 .progressViewStyle(.linear)
-                .tint(.blue)
+                .tint(.themeBlue)
                 .padding(.top, 8)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Personalise your\npreference")
                     .font(.largeTitle.bold())
+                    .foregroundStyle(Color.themeBlue)
                     .lineSpacing(2)
                 Text("Choose what kind of people you are.")
                     .foregroundStyle(.secondary)
@@ -89,7 +90,7 @@ struct OnboardingQuestionsView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.blue)
+                .background(Color.themeDarkYellow)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .padding(.bottom, 12)
@@ -104,7 +105,7 @@ struct OnboardingQuestionsView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(Color(.secondarySystemBackground))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
 
@@ -132,7 +133,7 @@ struct OnboardingQuestionsView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.blue)
+                            .background(Color.themeDarkYellow)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
@@ -162,9 +163,21 @@ struct OnboardingQuestionsView: View {
     
     private func completeOnboarding() {
         store.hasOnboarded = true
-        store.save()
+        store.saveProfileToCloud()
+
+        // 🚀 將最新問卷結果上傳到 Supabase
+        Task {
+            do {
+                try await SupabaseRepository.shared.upsertUserProfile(from: store)
+                print("✅ Uploaded updated onboarding profile to Supabase")
+            } catch {
+                print("❌ Failed to upload onboarding profile:", error)
+            }
+        }
+
         // App 會自動因為 hasOnboarded 變為 true 而切換到 ContentView
     }
+
 }
 
 struct TieBreakerView: View {
@@ -186,7 +199,7 @@ struct TieBreakerView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.blue)
+                    .background(Color.themeBlue)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
@@ -196,7 +209,7 @@ struct TieBreakerView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.blue)
+                    .background(Color.themeBlue)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
@@ -209,7 +222,7 @@ struct TieBreakerView: View {
 
 struct QuestionCard: View {
     let index: Int
-    let text: String
+    let text: LocalizedStringKey
     @Binding var value: Int
 
     var body: some View {
@@ -237,6 +250,8 @@ struct QuestionCard: View {
                     get: { Double(value) },
                     set: { value = Int($0.rounded()) }
                 ), in: 1...5, step: 1)
+                .tint(Color.themeBlue)
+                
                 Text("\(value)")
                     .font(.headline)
                     .frame(maxWidth: .infinity, alignment: .center)
