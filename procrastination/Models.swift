@@ -1,3 +1,5 @@
+//  Models.swift
+
 import Foundation
 
 enum HabitFrequency: String, Codable, CaseIterable, Identifiable {
@@ -9,9 +11,35 @@ enum HabitFrequency: String, Codable, CaseIterable, Identifiable {
 }
 
 enum ProcrastinationType: String, Codable, Equatable {
-    case unknown = "尚未分析"
-    case perfectionist = "完美主義型"
+    case unknown        = "尚未分析"
+    case perfectionist  = "完美主義型"
     case deadlineFighter = "死線戰士型"
+}
+
+
+
+// 🆕 社群模式（全專案只在這裡宣告一次）
+enum SocialMode: String, Codable, CaseIterable, Identifiable {
+    case cooperation   // 合作
+    case competition   // 競爭
+    
+    var id: String { rawValue }
+    
+    /// 給 UI 用的中文名稱
+    var displayName: String {
+        switch self {
+        case .cooperation: return "合作模式"
+        case .competition: return "競爭模式"
+        }
+    }
+}
+
+// 方便從 Goal.socialModeRaw (String?) 轉成 enum
+extension SocialMode {
+    init?(raw: String?) {
+        guard let raw else { return nil }
+        self.init(rawValue: raw)
+    }
 }
 
 struct Goal: Identifiable, Codable, Equatable {
@@ -24,26 +52,46 @@ struct Goal: Identifiable, Codable, Equatable {
     var reminders: [Reminder] = []
     var subTasks: [TaskItem] = []
     var createdAt: Date = Date()
+    
+    // 🆕 社群任務相關
+    var isGroupGoal: Bool = false                  // 是否為社群任務
+    var groupId: UUID? = nil                       // 同一個 group 任務共用的 id
+    var participantEmails: [String] = []           // 參與者 email（包含自己）
+    var socialModeRaw: String? = nil               // "cooperation" / "competition"
 }
 
 struct GoalBreakdownResponse: Codable {
-    var chatReply: String // 給使用者看的自然語言回覆
-    var tasks: [TaskItem]   // 給程式處理的任務列表
+    var chatReply: String
+    var tasks: [TaskItem]
 }
 
 struct ChatThread: Identifiable, Equatable, Codable {
-    let id: UUID
+    var id: UUID = UUID()
     var title: String
     var messages: [ChatMessage]
     var relatedGoalID: UUID? = nil
     var lastUpdated: Date = Date()
-    
-    init(id: UUID = UUID(), title: String, messages: [ChatMessage], relatedGoalID: UUID? = nil, lastUpdated: Date = Date()) {
+
+    // 日記 thread 資訊
+    var isJournal: Bool? = nil
+    var journalDate: Date? = nil
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        messages: [ChatMessage],
+        relatedGoalID: UUID? = nil,
+        lastUpdated: Date = Date(),
+        isJournal: Bool? = nil,
+        journalDate: Date? = nil
+    ) {
         self.id = id
         self.title = title
         self.messages = messages
         self.relatedGoalID = relatedGoalID
         self.lastUpdated = lastUpdated
+        self.isJournal = isJournal
+        self.journalDate = journalDate
     }
 }
 
@@ -53,8 +101,13 @@ struct ChatMessage: Identifiable, Equatable, Codable {
     var role: Role
     var text: String
     var date: Date
-    
-    init(id: UUID = UUID(), role: Role, text: String, date: Date = Date()) {
+
+    init(
+        id: UUID = UUID(),
+        role: Role,
+        text: String,
+        date: Date = Date()
+    ) {
         self.id = id
         self.role = role
         self.text = text
@@ -89,7 +142,13 @@ struct TaskItem: Identifiable, Codable, Equatable {
         self.id = UUID()
     }
     
-    init(id: UUID = UUID(), title: String, isCompleted: Bool = false, dueDate: Date? = nil, estimatedDuration: String? = nil) {
+    init(
+        id: UUID = UUID(),
+        title: String,
+        isCompleted: Bool = false,
+        dueDate: Date? = nil,
+        estimatedDuration: String? = nil
+    ) {
         self.id = id
         self.title = title
         self.isCompleted = isCompleted
@@ -120,6 +179,36 @@ struct Achievement: Identifiable, Codable, Equatable {
 struct ActivityStats: Codable, Equatable {
     var weekCompletedCount: Int = 0
     var monthCompletedCount: Int = 0
+}
+
+// MARK: - Journal helpers
+
+extension ChatThread {
+    var isJournalThread: Bool {
+        isJournal ?? false
+    }
+
+    var effectiveJournalDate: Date {
+        (journalDate ?? lastUpdated).startOfDayLocal
+    }
+
+    var firstUserMessage: ChatMessage? {
+        messages.first(where: { $0.role == .user })
+    }
+}
+
+extension ChatMessage {
+    func journalTitleCandidate(maxLength: Int = 20) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "未命名日記" }
+
+        let firstLine = trimmed.components(separatedBy: .newlines).first ?? trimmed
+
+        if firstLine.count <= maxLength { return firstLine }
+
+        let idx = firstLine.index(firstLine.startIndex, offsetBy: maxLength)
+        return String(firstLine[..<idx]) + "…"
+    }
 }
 
 extension Array where Element == TaskItem {
@@ -201,5 +290,5 @@ struct UserPreferences: Codable, Equatable {
     var weekdayWeekend: WeekdayWeekend = .same
     var focusSpan: FocusSpan = .m15_30
     var longTask: LongTaskPref = .chunks
+    var language: String = "zh-Hant"
 }
-

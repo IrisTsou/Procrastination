@@ -1,42 +1,159 @@
-//
 //  HomeView.swift
-//  procrastination
-//
-//  Created by Iris Tsou on 2025/10/25.
-//
 
 import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var store: AppStore
+    @EnvironmentObject var authVM: AuthViewModel
     @State private var selectedTab: SegmentedTabs.Tab = .all
     @State private var selectedDate: Date = Date()
     @State private var showBottomSheet = false
+    @State private var showAddGroupEntry = false      // 🆕 跳轉到 AddGroupEntryView
     
+    // MARK: - Derived data (今天的任務 & 過濾)
+    private var allTasksToday: [TaskItem] {
+        let all = store.goals.flatMap { $0.subTasks }
+        return all.filter { task in
+            guard let d = task.dueDate else { return false }
+            return Calendar.current.isDate(d, inSameDayAs: selectedDate)
+        }
+    }
+    
+    // 今天的「個人任務」（排除社群任務）
+    private var personalTasksToday: [TaskItem] {
+        allTasksToday.filter { task in
+            guard let goal = parentGoal(of: task) else { return true } // 沒找到 goal 的就當作個人任務
+            return (goal.isGroupGoal == false)
+        }
+    }
+
+    // 用來顯示在今日任務區塊的清單（+ 分頁篩選）
+    private var filteredTasksToday: [TaskItem] {
+        switch selectedTab {
+        case .all:
+            return personalTasksToday
+        case .todo:
+            return personalTasksToday.filter { !$0.isCompleted }
+        case .completed:
+            return personalTasksToday.filter { $0.isCompleted }
+        }
+    }
+
+    private var todayCompletedCount: Int { allTasksToday.filter { $0.isCompleted }.count }
+    private var todayTotalCount: Int { allTasksToday.count }
+    private var todayProgress: Double {
+        guard todayTotalCount > 0 else { return 0 }
+        return Double(todayCompletedCount) / Double(todayTotalCount)
+    }
+
+    // 今天的社群任務
+    private var groupTasksToday: [TaskItem] {
+        allTasksToday.filter { task in
+            guard let goal = parentGoal(of: task) else { return false }
+            return goal.isGroupGoal == true
+        }
+    }
+
+    private func parentGoal(of task: TaskItem) -> Goal? {
+        store.goals.first(where: { $0.subTasks.contains(where: { $0.id == task.id }) })
+    }
+
+    // MARK: - Banner 文案
+    private var bannerTitle: LocalizedStringKey {
+        let p = todayProgress
+        let typeRaw = store.procrastinationType.rawValue
+
+        if typeRaw.contains("完美") {
+            switch p {
+            case 0:
+                return "不用一次做到完美，先動一小步就很棒了 ✨"
+            case ..<0.25:
+                return "有開始就是贏一半，先讓草稿長出來就好 🌱"
+            case ..<0.50:
+                return "慢慢推進就好，你已經踏出一大步 🙂"
+            case ..<0.75:
+                return "已經做了這麼多，再加把勁就會更接近完成 🤍"
+            case ..<1.0:
+                return "快收尾了，不用修改到完美才交，現在的你已經很努力 🥹"
+            default:
+                return "今天已經做到夠多了，可以允許自己下班休息 🏆"
+            }
+
+        } else if typeRaw.contains("死線") || typeRaw.contains("戰士") {
+            switch p {
+            case 0:
+                return "不要等到最後一刻，先來個 5 分鐘暖身就好 🔥"
+            case ..<0.25:
+                return "已經比昨天更早開始了，之後衝刺會輕鬆很多 💪"
+            case ..<0.50:
+                return "進度過半了，再多一個小 checkpoint 就超棒 🚀"
+            case ..<0.75:
+                return "現在多做一點，deadline 當天就可以像在收尾不是救火 🙌"
+            case ..<1.0:
+                return "快完成了，最後這段當成小終點衝一把就好 🏁"
+            default:
+                return "今天有先動起來，已經打破只在死線前才動的老模式了 🏆"
+            }
+
+        } else {
+            switch p {
+            case 0:       return "Let's kick things off 💪"
+            case ..<0.25: return "Warming up… 🔄"
+            case ..<0.50: return "Nice momentum! 🚀"
+            case ..<0.75: return "Over halfway there 🙌"
+            case ..<1.0:  return "Almost done! 🔥"
+            default:      return "All done — great job! 🏆"
+            }
+        }
+    }
+
+    private var bannerSubtitle: LocalizedStringKey {
+        if todayTotalCount == 0 {
+            return "No tasks scheduled today"
+        } else {
+            return "\(todayCompletedCount) of \(todayTotalCount) completed"
+        }
+    }
+
+    // MARK: - Body
     var body: some View {
         NavigationStack {
             ZStack {
-                ScrollView {
-                    contentStack
-                        .padding(16)
-                }
-                
+                ScrollView { contentStack.padding(16) }
+
                 if showBottomSheet {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
                         .onTapGesture { showBottomSheet = false }
-                    
                     VStack {
                         Spacer()
-                        BottomSheet(isPresented: $showBottomSheet)
-                            .transition(.move(edge: .bottom))
+                        BottomSheet(
+                            isPresented: $showBottomSheet,
+                            onSetNewGoal: {
+                                // TODO: 開 AddEntryView
+                            },
+                            onSelectMood: { score in
+                                // TODO: 記錄心情
+                            },
+                            onCreateGroupGoal: {
+                                print("🔥 onCreateGroupGoal from HomeView")
+                                showBottomSheet = false
+                                showAddGroupEntry = true
+                            }
+                        )
+                        .transition(.move(edge: .bottom))
                     }
                 }
             }
+            .sheet(isPresented: $showAddGroupEntry) {
+                AddGroupEntryView()
+                    .environmentObject(store)
+                    .environmentObject(authVM)
+            }
         }
     }
-    
-    // MARK: - Split main content to reduce type-checker load
+
+    // MARK: - Main content
     private var contentStack: some View {
         VStack(alignment: .leading, spacing: 16) {
             titleRow
@@ -45,62 +162,94 @@ struct HomeView: View {
             dateStrip
             progressBannerSection
             Spacer()
-            SectionHeader(title: "Today's Tasks", actionTitle: "VIEW ALL") {}
+
+            SectionHeader(title: "Today's Tasks", actionTitle: "VIEW ALL") {
+                selectedTab = .all
+            }
             tasksSection
+
+            SectionHeader(title: "Today's Group Tasks") { }
+            groupTasksSection
         }
     }
     
+    // MARK: - Banner
     private var progressBannerSection: some View {
         ProgressBanner(
-            progress: 0.25,
-            title: "Your daily goals almost done! 🔥",
-            subtitle: "1 of 4 completed"
+            progress: todayProgress,
+            title: bannerTitle,
+            subtitle: bannerSubtitle
         )
         .padding(.horizontal, -20)
         .padding(.horizontal, 20)
     }
     
+    // MARK: - 個人任務區塊
     private var tasksSection: some View {
-        // 取得所有任務
-        let allTasks: [TaskItem] = store.goals.flatMap { $0.subTasks }
-        
-        // << 修改：根據 selectedDate 過濾出今天的任務 >>
-        let todaysTasks = allTasks.filter { task in
-            guard let dueDate = task.dueDate else { return false }
-            return Calendar.current.isDate(dueDate, inSameDayAs: selectedDate)
-        }
-            
-        return VStack(spacing: 12) {
-            if todaysTasks.isEmpty { // << 修改：檢查過濾後的列表 >>
-                Text("No tasks scheduled for this day. ✨")
+        VStack(spacing: 12) {
+            if filteredTasksToday.isEmpty {
+                Text(LocalizedStringKey(emptyMessage))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 100)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             } else {
-                ForEach(todaysTasks) { task in // << 修改：遍歷過濾後的列表 >>
-                    TaskRowWrapper(task: task)
+                ForEach(filteredTasksToday) { task in
+                    PersonalTaskRow(task: task)
+                }
+            }
+        }
+    }
+
+    private var emptyMessage: String {
+        switch selectedTab {
+        case .all:
+            return "No tasks scheduled for this day. ✨"
+        case .todo:
+            return "No to-do tasks for this day. 🎯"
+        case .completed:
+            return "No completed tasks yet. Keep going! 💫"
+        }
+    }
+
+    // MARK: - 社群任務區塊
+    private var groupTasksSection: some View {
+        VStack(spacing: 12) {
+            if groupTasksToday.isEmpty {
+                Text("No group tasks for this day. 🧑‍🤝‍🧑")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            } else {
+                ForEach(groupTasksToday) { task in
+                    GroupTaskRow(task: task)
                 }
             }
         }
     }
     
+    // MARK: - Title & Header
     private var titleRow: some View {
         HStack(alignment: .center) {
             Text("Home")
                 .font(.largeTitle.bold())
+                .foregroundColor(.themeBlue)
             Spacer()
             NavigationLink {
                 BreakDownGoalView()
             } label: {
                 Image(systemName: "text.bubble")
                     .font(.title3)
+                    .foregroundStyle(Color.themeBlue)
                     .frame(width: 44, height: 44)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.secondarySystemBackground))
+                            .fill(Color.white)
                     )
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
             }
             .buttonStyle(.plain)
         }
@@ -109,27 +258,45 @@ struct HomeView: View {
     private var headerArea: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Hi, Mert 👋")
+                Text("Hi, \(authVM.currentUser?.displayName ?? "Guest") 👋")
                     .font(.title2).bold()
                 Text("Let's beat procrastination together!")
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button {
-                // TODO: 導到 Mood / Journal
-            } label: {
-                Text(todayMoodEmoji)
-                    .font(.title2)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.secondarySystemBackground))
-                    )
+            HStack(spacing: 8) {
+                Button {
+                    // TODO: 導到 Mood / Journal
+                } label: {
+                    Text(todayMoodEmoji)
+                        .font(.title2)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white)
+                        )
+                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    ProfileView()
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.themeBlue)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white)
+                        )
+                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
-    
+
     private var todayMoodEmoji: String {
         let map = ["😡","😞","😢","😆","🥰"]  // 1..5
         if let today = store.moods.last(where: {
@@ -138,18 +305,20 @@ struct HomeView: View {
             let i = max(1, min(5, today.moodScore)) - 1
             return map[i]
         }
-        return "😆" // 沒資料時預設
+        return "😆"
     }
 
     private var dateStrip: some View {
-        let days: [Date] = (0..<9).compactMap { Calendar.current.date(byAdding: .day, value: $0-1, to: Date()) }
+        let days: [Date] = (0..<9).compactMap {
+            Calendar.current.date(byAdding: .day, value: $0 - 1, to: Date())
+        }
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(days, id: \.self) { day in
                     let isSelected = Calendar.current.isDate(day, inSameDayAs: selectedDate)
                     DayChip(
                         dayNumber: DateFormatter.dayNumber.string(from: day),
-                        weekday: DateFormatter.weekdayShort.string(from: day),
+                        weekday: getWeekdayString(from: day),
                         isSelected: isSelected
                     )
                     .onTapGesture { selectedDate = day }
@@ -158,26 +327,48 @@ struct HomeView: View {
             .padding(.vertical, 6)
         }
     }
+    
+    private func getWeekdayString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        // "EEE" 代表縮寫星期 (Mon, Tue / 週一, 週二)
+        formatter.dateFormat = "EEE"
+        // ✅ 關鍵：強制使用 AppStore 設定的語言
+        formatter.locale = Locale(identifier: store.language.rawValue)
+        return formatter.string(from: date)
+    }
 }
 
-// MARK: - Small wrapper to reduce generic depth in HomeView
-private struct TaskRowWrapper: View {
+//
+// MARK: - 個人任務 row
+//
+private struct PersonalTaskRow: View {
     @EnvironmentObject var store: AppStore
     let task: TaskItem
     
-    private var iconName: String {
-        // Find the goal that owns this task
-        if let goal = store.goals.first(where: { $0.subTasks.contains(where: { $0.id == task.id }) }) {
-            return goal.icon
-        }
-        return "checklist"
+    private var parentGoal: Goal? {
+        store.goals.first(where: { $0.subTasks.contains(where: { $0.id == task.id }) })
     }
+    
+    private var iconName: String {
+        parentGoal?.icon ?? "checkmark.circle"
+    }
+    
+    private var iconColor: Color {
+        if let hex = parentGoal?.colorHex {
+            return Color(hex: hex)
+        }
+        return .blue   // fallback 顏色
+    }
+
     
     var body: some View {
         TaskRow(
             icon: iconName,
+            iconColor: iconColor,
             title: task.title,
-            detail: task.isCompleted ? "Completed!" : "To-do",
+            detail: task.isCompleted
+                ? String(localized: "Completed!")
+                : String(localized: "To-do"),
             isOn: task.isCompleted,
             toggle: toggleTask,
             onFail: nil,
@@ -186,12 +377,58 @@ private struct TaskRowWrapper: View {
     }
     
     private func toggleTask() {
-        // Locate the goal and toggle within it if you have such a method; otherwise update tasksToday if needed
-        if let goalIndex = store.goals.firstIndex(where: { $0.subTasks.contains(where: { $0.id == task.id }) }) {
-            if let taskIndex = store.goals[goalIndex].subTasks.firstIndex(where: { $0.id == task.id }) {
-                store.goals[goalIndex].subTasks[taskIndex].isCompleted.toggle()
-                store.save()
+        store.toggleTask(task.id)
+    }
+}
+
+//
+// MARK: - 社群任務 row
+//
+private struct GroupTaskRow: View {
+    @EnvironmentObject var store: AppStore
+    let task: TaskItem
+
+    private var goal: Goal? {
+        store.goals.first(where: { $0.subTasks.contains(where: { $0.id == task.id }) })
+    }
+
+    private var iconName: String {
+        goal?.icon ?? "person.3.fill"
+    }
+
+    private var iconColor: Color {
+        if let hex = goal?.colorHex {
+            return Color(hex: hex)
+        }
+        return .blue
+    }
+
+
+    private var detailText: String {
+        guard let goal else { return "Group task" }
+        if let mode = SocialMode(raw: goal.socialModeRaw) {
+            switch mode {
+            case .cooperation: return "Group (Cooperation)"
+            case .competition: return "Group (Competition)"
             }
         }
+        return "Group task"
+    }
+
+    var body: some View {
+        TaskRow(
+            icon: iconName,
+            iconColor: iconColor,
+            title: task.title,
+            detail: task.isCompleted ? "\(detailText) · Completed" : detailText,
+            isOn: task.isCompleted,
+            toggle: toggleTask,
+            onFail: nil,
+            onDone: nil
+        )
+    }
+
+    private func toggleTask() {
+        store.toggleTask(task.id)
     }
 }
