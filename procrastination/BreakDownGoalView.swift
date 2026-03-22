@@ -39,7 +39,7 @@ struct BreakDownGoalView: View {
 
     /// 只取「非日記」threads
     private var nonJournalThreads: [ChatThread] {
-        store.conversations.filter {$0.isJournal != true}
+        store.conversations.filter { !$0.isJournalThread }
     }
 
     /// 目前活躍對話的 index
@@ -203,7 +203,7 @@ struct BreakDownGoalView: View {
             // 沒帶目標 ID 的情況：用第一條「非日記」對話（如果有）
             if activeThreadID == nil {
                 activeThreadID = store.conversations
-                    .filter { $0.isJournal != true }
+                    .filter { !$0.isJournalThread }
                     .first?.id
             }
         }
@@ -369,7 +369,7 @@ private struct ConversationPickerSheet: View {
 
     private var nonJournalThreads: [ChatThread] {
         store.conversations
-            .filter { $0.isJournal != true }
+            .filter { !$0.isJournalThread }
             .sorted(by: { $0.lastUpdated > $1.lastUpdated })
     }
 
@@ -414,7 +414,7 @@ private struct ConversationPickerSheet: View {
 
                     let stillValid = store.conversations.contains(where: { $0.id == activeThreadID })
                     if !stillValid {
-                        activeThreadID = store.conversations.first(where: { $0.id != Constants.journalThreadID })?.id
+                        activeThreadID = store.conversations.first(where: { !$0.isJournalThread })?.id
                     }
                 }
             }
@@ -485,34 +485,6 @@ struct MessageRow: View {
                     }
             }
         }
-    }
-}
-
-private struct SuggestionCard: View {
-    let s: Suggestion
-    let width: CGFloat
-    var tap: () -> Void
-
-    init(_ s: Suggestion, width: CGFloat, tap: @escaping () -> Void) {
-        self.s = s; self.width = width; self.tap = tap
-    }
-
-    var body: some View {
-        Button(action: tap) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(LocalizedStringKey(s.title))
-                    .font(.subheadline.bold())
-                Text(LocalizedStringKey(s.subtitle))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-            .padding(14)
-            .frame(width: width, height: 110, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemBackground)))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.gray.opacity(0.12)))
-        }
-        .buttonStyle(.plain)
     }
 }
 

@@ -115,12 +115,6 @@ struct ChatMessage: Identifiable, Equatable, Codable {
     }
 }
 
-struct Suggestion: Identifiable {
-    let id = UUID()
-    let title: String
-    let subtitle: String
-}
-
 struct TaskItem: Identifiable, Codable, Equatable {
     var id: UUID
     var title: String
@@ -189,7 +183,7 @@ extension ChatThread {
     }
 
     var effectiveJournalDate: Date {
-        (journalDate ?? lastUpdated).startOfDayLocal
+        (journalDate ?? lastUpdated).startOfDay
     }
 
     var firstUserMessage: ChatMessage? {
@@ -221,19 +215,6 @@ extension Array where Element == TaskItem {
 
 extension String {
     static func colorHex(default hex: String = "#4F46E5") -> String { hex }
-}
-
-extension DateFormatter {
-    static let dayNumber: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "d"
-        return df
-    }()
-    static let weekdayShort: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "EEE"
-        return df
-    }()
 }
 
 enum Weekday: Int, CaseIterable, Identifiable, Codable {
@@ -291,4 +272,58 @@ struct UserPreferences: Codable, Equatable {
     var focusSpan: FocusSpan = .m15_30
     var longTask: LongTaskPref = .chunks
     var language: String = "zh-Hant"
+}
+
+// MARK: - Date Extensions（全專案統一在這裡）
+
+extension Date {
+    /// 當天開始（00:00:00），使用裝置時區
+    var startOfDay: Date { Calendar.current.startOfDay(for: self) }
+
+    /// 當天結束（23:59:59），使用裝置時區
+    var endOfDay: Date {
+        Calendar.current.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay)!
+    }
+}
+
+// MARK: - DateFormatter Extensions（全專案統一在這裡）
+
+extension DateFormatter {
+    /// "d"（日期數字，例如 5）
+    static let dayNumber: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "d"
+        return df
+    }()
+
+    /// "EEE"（縮寫星期，例如 Mon）
+    static let weekdayShort: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "EEE"
+        return df
+    }()
+
+    /// "yyyy/MM/dd"（日記索引顯示用）
+    static let journalDate: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "yyyy/MM/dd"
+        return df
+    }()
+
+    /// "yyyy-MM-dd"（ISO 日期，給 Gemini / Supabase 解析用）
+    static let isoDate: DateFormatter = {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = .current
+        df.dateFormat = "yyyy-MM-dd"
+        return df
+    }()
+}
+
+// MARK: - Suggestion（全專案共用，BreakDownGoalView 與 JournalView 皆使用）
+
+struct Suggestion: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
 }

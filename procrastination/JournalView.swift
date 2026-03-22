@@ -14,7 +14,7 @@ struct JournalView: View {
     @State private var input = ""
     @State private var isGenerating = false
 
-    private let suggestions: [JournalSuggestion] = [
+    private let suggestions: [Suggestion] = [
         .init(title: "Tell me how you feel when completing tasks?",
               subtitle: "Sense of achievement, exhausted…"),
         .init(title: "Do you face any bottlenecks?",
@@ -104,7 +104,7 @@ struct JournalView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(suggestions) { s in
-                        JournalSuggestionCard(s, width: 260) {
+                        SuggestionCard(s, width: 260, height: 120) {
                             input = s.title
                         }
                     }
@@ -129,7 +129,7 @@ struct JournalView: View {
     // MARK: - 一天一個日記 thread
 
     private func ensureTodayThread() -> UUID {
-        let today = Date().startOfDayLocal
+        let today = Date().startOfDay
 
         if let existing = journalThreads.first(where: { $0.effectiveJournalDate == today }) {
             return existing.id
@@ -186,7 +186,7 @@ struct JournalView: View {
         // 日記命名：第一次 user 訊息
         if thread.isJournalThread {
             if thread.journalDate == nil {
-                thread.journalDate = Date().startOfDayLocal
+                thread.journalDate = Date().startOfDay
             }
             if let firstUser = thread.firstUserMessage {
                 if thread.title.isEmpty || thread.title == "Mood Journal" {
@@ -271,12 +271,12 @@ private struct JournalIndexSheetSimple: View {
 
     // 依日期分成「這週 / 一週前 / 兩週前 / 三週前 / 一個月前以上」
     private var buckets: [Bucket] {
-        let now = Date().startOfDayLocal
+        let now = Date().startOfDay
         let cal = Calendar.current
         var dict: [String: [ChatThread]] = [:]
 
         func bucketTitle(for date: Date) -> String {
-            let d1 = date.startOfDayLocal
+            let d1 = date.startOfDay
             let d2 = now
             let diff = cal.dateComponents([.day], from: d1, to: d2).day ?? 0
             switch diff {
@@ -304,12 +304,6 @@ private struct JournalIndexSheetSimple: View {
                 threads: arr.sorted { $0.effectiveJournalDate > $1.effectiveJournalDate }
             )
         }
-    }
-
-    private var dateFormatter: DateFormatter {
-        let df = DateFormatter()
-        df.dateFormat = "yyyy/MM/dd"
-        return df
     }
 
     var body: some View {
@@ -345,7 +339,7 @@ private struct JournalIndexSheetSimple: View {
                                                 .font(.body)
                                                 .lineLimit(1)
                                                 .foregroundStyle(.black)
-                                            Text(dateFormatter.string(from: t.effectiveJournalDate))
+                                            Text(DateFormatter.journalDate.string(from: t.effectiveJournalDate))
                                                 .font(.caption)
                                                 .foregroundStyle(.black.opacity(0.6))
                                         }
@@ -378,47 +372,6 @@ private struct JournalIndexSheetSimple: View {
 //
 // MARK: - Suggestion & ChatInputBar（跟你之前一樣）
 //
-
-struct JournalSuggestion: Identifiable {
-    let id = UUID()
-    let title: String
-    let subtitle: String
-}
-struct JournalSuggestionCard: View {
-    let s: JournalSuggestion
-    let width: CGFloat
-    var tap: () -> Void
-
-    init(_ s: JournalSuggestion, width: CGFloat, tap: @escaping () -> Void) {
-        self.s = s; self.width = width; self.tap = tap
-    }
-
-    var body: some View {
-        Button(action: tap) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(LocalizedStringKey(s.title))
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.leading)
-                Text(LocalizedStringKey(s.subtitle))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-            .padding(14)
-            .frame(width: width, height: 120, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(.secondarySystemBackground))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.gray.opacity(0.12))
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
 
 private struct ChatInputBar: View {
     @Binding var text: String

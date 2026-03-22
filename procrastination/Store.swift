@@ -328,12 +328,7 @@ extension AppStore {
     /// 把 "yyyy-MM-dd" 的字串轉成 Date
     fileprivate func parseYyyyMMdd(_ s: String?) -> Date? {
         guard let s, !s.isEmpty else { return nil }
-        let df = DateFormatter()
-        df.calendar = Calendar(identifier: .gregorian)
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.dateFormat = "yyyy-MM-dd"
-        return df.date(from: s)
+        return DateFormatter.isoDate.date(from: s)
     }
 
     /// 從 Supabase 抓 group goals 並同步到本地 snapshot
