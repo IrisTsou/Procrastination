@@ -7,8 +7,6 @@ struct HomeView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @State private var selectedTab: SegmentedTabs.Tab = .all
     @State private var selectedDate: Date = Date()
-    @State private var showBottomSheet = false
-    @State private var showAddGroupEntry = false      // 🆕 跳轉到 AddGroupEntryView
     
     // MARK: - Derived data (今天的任務 & 過濾)
     private var allTasksToday: [TaskItem] {
@@ -118,38 +116,7 @@ struct HomeView: View {
     // MARK: - Body
     var body: some View {
         NavigationStack {
-            ZStack {
-                ScrollView { contentStack.padding(16) }
-
-                if showBottomSheet {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                        .onTapGesture { showBottomSheet = false }
-                    VStack {
-                        Spacer()
-                        BottomSheet(
-                            isPresented: $showBottomSheet,
-                            onSetNewGoal: {
-                                // TODO: 開 AddEntryView
-                            },
-                            onSelectMood: { score in
-                                // TODO: 記錄心情
-                            },
-                            onCreateGroupGoal: {
-                                print("🔥 onCreateGroupGoal from HomeView")
-                                showBottomSheet = false
-                                showAddGroupEntry = true
-                            }
-                        )
-                        .transition(.move(edge: .bottom))
-                    }
-                }
-            }
-            .sheet(isPresented: $showAddGroupEntry) {
-                AddGroupEntryView()
-                    .environmentObject(store)
-                    .environmentObject(authVM)
-            }
+            ScrollView { contentStack.padding(16) }
         }
     }
 
@@ -265,8 +232,9 @@ struct HomeView: View {
             }
             Spacer()
             HStack(spacing: 8) {
-                Button {
-                    // TODO: 導到 Mood / Journal
+                NavigationLink {
+                    JournalView()
+                        .environmentObject(store)
                 } label: {
                     Text(todayMoodEmoji)
                         .font(.title2)
@@ -329,12 +297,9 @@ struct HomeView: View {
     }
     
     private func getWeekdayString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        // "EEE" 代表縮寫星期 (Mon, Tue / 週一, 週二)
-        formatter.dateFormat = "EEE"
-        // ✅ 關鍵：強制使用 AppStore 設定的語言
-        formatter.locale = Locale(identifier: store.language.rawValue)
-        return formatter.string(from: date)
+        // 強制使用 AppStore 設定的語言（locale 依語言動態切換）
+        DateFormatter.weekdayShort.locale = Locale(identifier: store.language.rawValue)
+        return DateFormatter.weekdayShort.string(from: date)
     }
 }
 

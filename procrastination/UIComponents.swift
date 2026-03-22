@@ -181,32 +181,6 @@ struct ProgressBanner: View {
     }
 }
 
-struct ChallengeCard: View {
-    var title: String
-    var timeLeft: String
-    var friendsJoined: String
-    var progress: Double
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "clock")
-                    .foregroundStyle(.blue)
-                Text(title).bold()
-                Spacer()
-                HStack(spacing: 4) {
-                    Circle().fill(Color.blue).frame(width: 22, height: 22)
-                    Circle().fill(Color.purple).frame(width: 22, height: 22)
-                    Text(friendsJoined).foregroundStyle(.secondary).font(.caption)
-                }
-            }
-            Text(timeLeft).font(.caption).foregroundStyle(.secondary)
-            ProgressBar(progress: progress)
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color.white))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.gray.opacity(0.1)))
-    }
-}
 
 struct TaskRow: View {
     let icon: String
@@ -354,7 +328,6 @@ struct BottomSheet: View {
                 
                 // 2) 🆕 Create a group goal（新增社群任務）
                 Button {
-                    print("👉 BottomSheet group button tapped")
                     isPresented = false
                     onCreateGroupGoal()
                 } label: {
@@ -481,5 +454,38 @@ extension Goal {
     var socialMode: SocialMode? {
         get { SocialMode(raw: socialModeRaw) }
         set { socialModeRaw = newValue?.rawValue }
+    }
+}
+
+// MARK: - SuggestionCard（BreakDownGoalView 與 JournalView 共用）
+
+struct SuggestionCard: View {
+    let s: Suggestion
+    let width: CGFloat
+    var height: CGFloat = 110
+    var tap: () -> Void
+
+    init(_ s: Suggestion, width: CGFloat, height: CGFloat = 110, tap: @escaping () -> Void) {
+        self.s = s; self.width = width; self.height = height; self.tap = tap
+    }
+
+    var body: some View {
+        Button(action: tap) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(LocalizedStringKey(s.title))
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                Text(LocalizedStringKey(s.subtitle))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            .padding(14)
+            .frame(width: width, height: height, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemBackground)))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.gray.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
     }
 }

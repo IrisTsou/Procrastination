@@ -176,27 +176,6 @@ final class SupabaseRepository {
         }
     }
 
-    // 開發用：最小 smoke 測試
-    func smokeInsertUserProfilesMinimal() async {
-        do {
-            let uid = try await currentUID()
-            let mini: [String: AnyEncodable] = [
-                "user_id": .string(uid.uuidString),
-                "has_onboarded": .bool(true)
-            ]
-            let resp = try await db
-                .from("user_profiles")
-                .insert(mini)
-                .select()
-                .single()
-                .execute()
-            print("[SMOKE] insert OK bytes:", resp.data.count)
-            print("[SMOKE] body:", String(data: resp.data, encoding: .utf8) ?? "<non-utf8>")
-        } catch {
-            print("[SMOKE] ❌ insert error:", error)
-        }
-    }
-
     // MARK: - 上傳（Upsert / Insert）
 
     func upsertGoal(_ g: Goal) async throws {

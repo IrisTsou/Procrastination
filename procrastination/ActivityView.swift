@@ -1,14 +1,8 @@
-<<<<<<< HEAD
 //
 //  ActivityView.swift
-//  procrastination
-//
-//  Created by Iris Tsou on 2025/10/25.
 //
 
 import SwiftUI
-import BCrypt
->>>>>>> teamrepo/main
 
 struct ActivityView: View {
     @EnvironmentObject var store: AppStore
@@ -417,19 +411,9 @@ private struct StatItem: View {
         }
     }
 }
-<<<<<<< HEAD
-=======
-
-
-
-private extension Date {
-    var startOfDay: Date { Calendar.current.startOfDay(for: self) }
-    var endOfDay: Date { Calendar.current.date(byAdding: DateComponents(day: 1, second: -1), to: startOfDay)! }
-}
 
 // MARK: - Preview
 #Preview {
     let store = AppStore()
     return ActivityView().environmentObject(store)
 }
->>>>>>> teamrepo/main

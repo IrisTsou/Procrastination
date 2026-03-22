@@ -48,9 +48,11 @@ final class AuthViewModel: ObservableObject {
             // 🔁 切換到該使用者的 snapshot（會從 Supabase 抓雲端資料）
             await store.switchUser(to: appUser.id.uuidString)
 
+        } catch let authError as AppAuthError {
+            self.errorMessage = authError.errorDescription
         } catch {
             print("[AuthViewModel.register] error detail:", error)
-            self.errorMessage = "Register failed"
+            self.errorMessage = "伺服器錯誤，請稍後再試"
         }
     }
 
@@ -81,9 +83,11 @@ final class AuthViewModel: ObservableObject {
             // ⬇️ 只做一件事：切換到這個 user 的 snapshot
             await store.switchUser(to: user.id.uuidString)
 
+        } catch let authError as AppAuthError {
+            self.errorMessage = authError.errorDescription
         } catch {
             print("[AuthViewModel.login] error:", error)
-            self.errorMessage = "Login failed"
+            self.errorMessage = "伺服器錯誤，請稍後再試"
         }
     }
 
