@@ -14,22 +14,22 @@
 
 ## ✨ Features
 
-### 🎯 AI Goal Breakdown `⭐ My Work`
+### AI Goal Breakdown
 Enter a goal and let Gemini AI break it down into actionable daily tasks — personalized based on your procrastination type, work schedule, and focus span. Adjust the plan through ongoing conversation.
 
-### 💬 Mood Journal `⭐ My Work (UI + API integration)`
-A CBT-inspired chat interface where the AI responds like a supportive friend — offering emotional validation, cognitive reframing, and small behavioral experiments tailored to your procrastination archetype. *(Prompt designed by teammate)*
+### Mood Journal
+A CBT-inspired chat interface where the AI responds like a supportive friend — offering emotional validation, cognitive reframing, and small behavioral experiments tailored to your procrastination archetype. *(I was responsible for UI + API integration, Prompt designed by teammate)*
 
-### 🏠 Home Dashboard `⭐ My Work`
+### Home Dashboard 
 View today's tasks, track daily progress with a visual ring, and get personalized motivational banners based on your procrastination type and current completion rate.
 
-### 👤 Profile & Preferences `⭐ My Work`
+### Profile & Preferences 
 Onboarding questionnaire to identify your procrastination archetype (Perfectionist / Deadline Fighter). Customize work schedule, focus span, and language (English / 繁體中文).
 
-### 👥 Group Goals `Teammate`
+### Group Goals `Teammate`
 Create shared goals with friends in Cooperation or Competition mode. Track each other's progress in real time.
 
-### 📊 Activity `Teammate`
+### Activity `Teammate`
 Weekly and monthly task completion charts with mood trend visualization.
 
 ---
@@ -42,7 +42,7 @@ Weekly and monthly task completion charts with mood trend visualization.
 
 ---
 
-## 🧠 My Contributions
+## My Contributions
 
 This is a 3-person team project. My responsibilities:
 
@@ -56,7 +56,7 @@ This is a 3-person team project. My responsibilities:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 procrastination/
